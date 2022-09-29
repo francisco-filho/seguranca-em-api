@@ -19,22 +19,21 @@ public class Main {
     public static void main(String[] args) {
         var datasource = JdbcConnectionPool.create("jdbc:h2:mem:natter", "natter_api_user", "password");
         var database = Database.forDataSource(datasource);
-
         createTables(database);
 
         var spaceController = new SpaceController(database);
 
         post("/spaces", spaceController::createSpace);
 
+        notFound(new JSONObject().put("notfound", "just a 404").toString());
+        exception(IllegalArgumentException.class, Main::badRequest);
+        internalServerError(new JSONObject().put("error", "internal server error").toString());
+
         afterAfter((req, res) -> {
             res.type("application/json");
             res.header("Server", "");
             res.header("X-XSS-Protection", "0");
         });
-
-        notFound(new JSONObject().put("notfound", "just a 404").toString());
-        exception(IllegalArgumentException.class, Main::badRequest);
-        internalServerError(new JSONObject().put("error", "internal server error").toString());
     }
 
     private static void badRequest(Exception ex, Request request, Response response) {
