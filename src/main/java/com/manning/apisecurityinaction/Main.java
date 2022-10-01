@@ -1,5 +1,6 @@
 package com.manning.apisecurityinaction;
 
+import com.google.common.util.concurrent.RateLimiter;
 import com.manning.apisecurityinaction.controller.SpaceController;
 import org.dalesbred.Database;
 import org.h2.jdbcx.JdbcConnectionPool;
@@ -20,6 +21,14 @@ public class Main {
         var datasource = JdbcConnectionPool.create("jdbc:h2:mem:natter", "natter_api_user", "password");
         var database = Database.forDataSource(datasource);
         createTables(database);
+
+        var rateLimiter = RateLimiter.create(2.0d);
+        before((req, res) -> {
+            if (!rateLimiter.tryAcquire()) {
+                res.header("Retry-After", "2");
+                halt(429);
+            }
+        });
 
         var spaceController = new SpaceController(database);
 
@@ -45,7 +54,7 @@ public class Main {
         try {
             Path schemaPath = Paths.get(Main.class.getResource("/schema.sql").toURI());
             database.update(Files.readString(schemaPath));
-        } catch (URISyntaxException | IOException e) {
+        } catch (URISyntaxException | IOException | NullPointerException e) {
             throw new RuntimeException(e);
         }
     }
