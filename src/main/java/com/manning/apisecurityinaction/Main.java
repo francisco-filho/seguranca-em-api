@@ -2,6 +2,7 @@ package com.manning.apisecurityinaction;
 
 import com.google.common.util.concurrent.RateLimiter;
 import com.manning.apisecurityinaction.controller.SpaceController;
+import com.manning.apisecurityinaction.controller.UserController;
 import org.dalesbred.Database;
 import org.h2.jdbcx.JdbcConnectionPool;
 import org.json.JSONObject;
@@ -31,7 +32,11 @@ public class Main {
         });
 
         var spaceController = new SpaceController(database);
+        var userController = new UserController(database);
 
+        before(userController::authenticate);
+
+        post("/users", userController::registerUser);
         post("/spaces", spaceController::createSpace);
 
         notFound(new JSONObject().put("notfound", "just a 404").toString());

@@ -23,6 +23,11 @@ public class SpaceController {
             throw new IllegalArgumentException("The owner name should have only letters and numbers");
         }
 
+        var subject = req.attribute("subject");
+        if (!owner.equals(subject)){
+            throw new IllegalArgumentException("The owner of the namespace should be the loggedIn user");
+        }
+
         return database.withTransaction(tx -> {
             var spaceId = database.findUniqueLong("SELECT NEXT VALUE FOR space_id_seq");
 
