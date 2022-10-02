@@ -1,6 +1,7 @@
 package com.manning.apisecurityinaction;
 
 import com.google.common.util.concurrent.RateLimiter;
+import com.manning.apisecurityinaction.controller.AuditController;
 import com.manning.apisecurityinaction.controller.SpaceController;
 import com.manning.apisecurityinaction.controller.UserController;
 import org.dalesbred.Database;
@@ -23,6 +24,8 @@ public class Main {
         var database = Database.forDataSource(datasource);
         createTables(database);
 
+        secure("localhost.p12", "changeit", null, null);
+
         var rateLimiter = RateLimiter.create(2.0d);
         before((req, res) -> {
             if (!rateLimiter.tryAcquire()) {
@@ -33,20 +36,27 @@ public class Main {
 
         var spaceController = new SpaceController(database);
         var userController = new UserController(database);
+        var auditController = new AuditController(database);
 
         before(userController::authenticate);
+        before(auditController::auditRequestStart);
 
         post("/users", userController::registerUser);
         post("/spaces", spaceController::createSpace);
+        get("/logs", auditController::readAuditLog);
 
         notFound(new JSONObject().put("notfound", "just a 404").toString());
         exception(IllegalArgumentException.class, Main::badRequest);
         internalServerError(new JSONObject().put("error", "internal server error").toString());
 
+        afterAfter(auditController::auditRequestEnd);
+
         afterAfter((req, res) -> {
             res.type("application/json");
             res.header("Server", "");
+            res.header("", "nosniff");
             res.header("X-XSS-Protection", "0");
+            res.header("Strict-Transport-Security", "max-age=3600");
         });
     }
 

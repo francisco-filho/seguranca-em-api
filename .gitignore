@@ -1,2 +1,4 @@
+*.p12
+*.pem
 .idea
 target
